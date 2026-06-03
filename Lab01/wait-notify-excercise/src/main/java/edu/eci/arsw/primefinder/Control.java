@@ -5,6 +5,8 @@
  */
 package edu.eci.arsw.primefinder;
 
+import java.util.Scanner;
+
 /**
  *
  */
@@ -18,6 +20,7 @@ public class Control extends Thread {
 
     private PrimeFinderThread pft[];
 
+    private final Object monitor = new Object();
     private boolean paused = false;
 
     
@@ -27,25 +30,69 @@ public class Control extends Thread {
 
         int i;
         for(i = 0;i < NTHREADS - 1; i++) {
-            PrimeFinderThread elem = new PrimeFinderThread(i*NDATA, (i+1)*NDATA);
+            PrimeFinderThread elem = new PrimeFinderThread(i*NDATA, (i+1)*NDATA, this);
             pft[i] = elem;
         }
-        pft[i] = new PrimeFinderThread(i*NDATA, MAXVALUE + 1);
+        pft[i] = new PrimeFinderThread(i*NDATA, MAXVALUE + 1, this);
     }
     
     public static Control newControl() {
         return new Control();
     }
 
+    public Object getMonitor(){
+        return monitor;
+    }
+
     public boolean isPaused() {
-        return paused;
+        synchronized(monitor){
+            return paused;
+        }
+    }
+
+    public int getPrimesFound() {
+        int ans = 0;
+        //ans = pft.stream().mapToInt(t -> t.getPrimesFound()).sum();
+        for(PrimeFinderThread t : pft) {
+            ans += t.getPrimesFound();
+        }
+        return ans;
     }
 
     @Override
     public void run() {
+        Scanner sc = new Scanner(System.in);
+        
+
         for(int i = 0;i < NTHREADS;i++ ) {
             pft[i].start();
         }
+        
+        while(true) {
+            try {
+                Thread.sleep(TMILISECONDS);
+            } catch (InterruptedException ex) {
+                System.out.println("Thread interrupted");
+            }
+
+            synchronized(monitor) {
+                paused = true;
+            }
+
+            System.out.println("Primos encontrados: "+ getPrimesFound());
+
+
+            System.out.println("Press ENTER to continue...");
+            sc.nextLine();
+
+            synchronized(monitor) {
+                paused = false;
+                monitor.notifyAll();
+            }
+        }
+        
+        
+        
     }
     
 }
