@@ -17,6 +17,9 @@ public class Control extends Thread {
     private final int NDATA = MAXVALUE / NTHREADS;
 
     private PrimeFinderThread pft[];
+
+    private boolean paused = false;
+
     
     private Control() {
         super();
@@ -32,6 +35,10 @@ public class Control extends Thread {
     
     public static Control newControl() {
         return new Control();
+    }
+
+    public boolean isPaused() {
+        return paused;
     }
 
     @Override

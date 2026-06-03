@@ -7,7 +7,8 @@ public class PrimeFinderThread extends Thread{
 
 	
 	int a,b;
-	
+	private Control control;
+    
 	private List<Integer> primes;
 	
 	public PrimeFinderThread(int a, int b) {
