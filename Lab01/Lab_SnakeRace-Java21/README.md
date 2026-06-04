@@ -57,11 +57,8 @@ co.eci.snake
 # Actividades del laboratorio
 
 ## Parte I — (Calentamiento) `wait/notify` en un programa multi-hilo
-### Objetivo
 
-Modificar `PrimeFinder` para que, cada `t` milisegundos, todos los hilos trabajadores se detengan, se muestre cuántos números primos se han encontrado y el programa espere ENTER para reanudar. La solución debe usar el modelo de monitores de Java sin espera activa.
-
-### Implementación general
+Modificamos `PrimeFinder` para que, cada `t` milisegundos, todos los hilos trabajadores se detengan, se muestre cuántos números primos se han encontrado y el programa espere ENTER para reanudar. La solución usa el modelo de monitores de Java sin espera activa.
 
 La coordinación se concentra en `Control` y en un único monitor compartido. Los workers verifican una condición de pausa antes de continuar el procesamiento, mientras que el hilo principal activa y desactiva dicha pausa en intervalos regulares.
 
@@ -89,9 +86,7 @@ La coordinación se concentra en `Control` y en un único monitor compartido. Lo
 - **Espera activa**: no se hace polling; los hilos quedan bloqueados dentro de `wait()` hasta que son despertados.
 
 
-### Conclusión
-
-La implementación aplica correctamente un esquema de pausa y reanudación basado en monitores en Java. El uso de un único lock compartido y de una condición explícita permite coordinar los hilos de manera segura, clara y sin consumo innecesario de CPU.
+El uso de un único lock compartido y de una condición explícita permite coordinar los hilos de manera segura, clara y sin consumo innecesario de CPU.
 
 
 ---
@@ -100,11 +95,34 @@ La implementación aplica correctamente un esquema de pausa y reanudación basad
 
 ### 1) Análisis de concurrencia
 
-- Explica **cómo** el código usa hilos para dar autonomía a cada serpiente.
-- **Identifica** y documenta en **`el reporte de laboratorio`**:
-  - Posibles **condiciones de carrera**.
-  - **Colecciones** o estructuras **no seguras** en contexto concurrente.
-  - Ocurrencias de **espera activa** (busy-wait) o de sincronización innecesaria.
+El código da autonomía a cada serpiente usando un `SnakeRunner` por serpiente. Cada runner ejecuta su propio ciclo: decide giros, avanza, reacciona al resultado del movimiento y duerme un tiempo corto antes del siguiente paso. En otras palabras, cada serpiente “piensa” y se mueve por su cuenta; no existe un hilo central que mueva a todas.
+
+Por otro lado el sistema tiene dos caminos concurrentes principales: los hilos de las serpientes, que actualizan el modelo del juego, y la UI, que repinta el tablero y consulta el estado para mostrarlo.
+El `GameClock` controla estos repintados y el estado visual de la interfaz, pero no es quien mueve a las serpientes. Por eso, pausar la UI no detiene automáticamente los `SnakeRunner`.
+
+### Posibles condiciones de carrera
+
+- `Board` es compartido por todos los `SnakeRunner`. Sin sincronización, dos hilos podrían intentar modificar al mismo tiempo ratones, obstáculos, teleports o turbo: por ejemplo si dos serpientes se comen al mismo tiempo un raton, ambas intentan añadir un nuevo obstaculo y un nuevo raton y asi alterar estas colecciones. O del mismo modo como el metodo randomEmpty() que no esta protegido y puede ser accedido por multiple hilos.
+
+  Pero por eso `Board.step(...)` está sincronizado, lo cual protege el avance de una serpiente sobre el tablero y evita que dos runners alteren el mismo estado al mismo tiempo. 
+
+- Se usa `snapshot()` para la lectura que usa la UI, lo permite leer el cuerpo para dibujarlo, pero el riesgo aparece si la UI lee mientras otro hilo modifica la serpiente.
+- Los metodos `head()` y `advance()` trabajan sobre el mismo estado interno de la serpiente. Si fueran llamados desde varios hilos sin coordinación, podrían producir lecturas inconsistentes o pérdida de actualizaciones.
+- El metodo `turn()` modifica la dirección de la serpiente mientras `SnakeRunner` la consulta en cada paso.
+
+### Colecciones o estructuras no seguras en contexto concurrente
+
+- `ArrayDeque` en `Snake.body`.
+- `HashSet` en `Board.mice`, `Board.obstacles` y `Board.turbo`.
+- `HashMap` en `Board.teleports`.
+
+Estas colecciones no son thread‑safe pero están protegidas parcialmente por sincronización externa.
+
+### Ocurrencias de espera activa (busy-wait) o sincronización innecesaria
+
+No se observa un busy-wait clásico fuerte, porque `SnakeRunner` no entra en un ciclo de consulta constante sin dormir: después de mover una serpiente, hace `Thread.sleep(...)` y no gasta CPU. Tambien puede haber un bloqueo innecesario ya que el metodo step es sincronizado, entonces bloquea todo el board y a las demas serpientes.
+
+Por otro lado el control de ejecución está desacoplado entre la UI y los runners. `GameClock.pause()` solo cambia el estado visual de la interfaz, pero los `SnakeRunner` siguen corriendo. Esto explica por qué al pausar la UI puede seguir avanzando la simulación interna y parece como si se teletransportaran.
 
 ### 2) Correcciones mínimas y regiones críticas
 
