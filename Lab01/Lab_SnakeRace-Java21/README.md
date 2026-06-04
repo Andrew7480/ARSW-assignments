@@ -170,7 +170,8 @@ Con esta estrategia se evita el _tearing_ de estado al pausar, porque el resumen
 - El juego **no debe romperse**: sin `ConcurrentModificationException`, sin lecturas inconsistentes, sin _deadlocks_.
 - Si habilitas **teleports** y **turbo**, verifica que las reglas no introduzcan carreras.
 
-> Entregables detallados más abajo.
+![resumen](docs/board20.png)
+
 
 ---
 
