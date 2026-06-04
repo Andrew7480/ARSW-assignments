@@ -2,6 +2,7 @@ package co.eci.snake.core;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -15,6 +16,7 @@ public final class Board {
   private final Set<Position> obstacles = new HashSet<>();
   private final Set<Position> turbo = new HashSet<>();
   private final Map<Position, Position> teleports = new HashMap<>();
+  private List<Snake> snakes = List.of();
 
   public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED, DEAD}
 
@@ -36,12 +38,27 @@ public final class Board {
   public synchronized Set<Position> turbo() { return new HashSet<>(turbo); }
   public synchronized Map<Position, Position> teleports() { return new HashMap<>(teleports); }
 
+  public synchronized void registerSnakes(List<Snake> snakes) {
+    this.snakes = List.copyOf(snakes);
+  }
+
   public synchronized MoveResult step(Snake snake) {
     Objects.requireNonNull(snake, "snake");
+    if (!snake.isAlive()) {
+      return MoveResult.DEAD;
+    }
 
     var head = snake.head();
+    if (head == null) {
+      return MoveResult.DEAD;
+    }
     var dir = snake.direction();
     Position next = new Position(head.x() + dir.dx, head.y() + dir.dy).wrap(width, height);
+
+    if (snake.snapshot().contains(next) || collidesWithOtherSnakes(snake, next)) {
+      killSnake(snake);
+      return MoveResult.DEAD;
+    }
 
     if (obstacles.contains(next)) return MoveResult.HIT_OBSTACLE;
 
@@ -75,6 +92,23 @@ public final class Board {
       teleports.put(a, b);
       teleports.put(b, a);
     }
+  }
+
+  private boolean collidesWithOtherSnakes(Snake snake, Position next) {
+    for (Snake other : snakes) {
+      if (other == snake || !other.isAlive()) {
+        continue;
+      }
+      if (other.snapshot().contains(next)) {
+        killSnake(other);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void killSnake(Snake snake) {
+    snake.die();
   }
 
   private Position randomEmpty() {

@@ -25,7 +25,7 @@ public final class SnakeRunner implements Runnable {
   @Override
   public void run() {
     try {
-      while (!Thread.currentThread().isInterrupted()) {
+      while (!Thread.currentThread().isInterrupted() && snake.isAlive()) {
         try { 
           pauseController.waitIfPaused();
         } catch (InterruptedException ie) {
@@ -33,9 +33,15 @@ public final class SnakeRunner implements Runnable {
           break;
         }
 
+        if (!snake.isAlive()) {
+          break;
+        }
+
         maybeTurn();
         var res = board.step(snake);
-        if (res == Board.MoveResult.HIT_OBSTACLE) {
+        if (res == Board.MoveResult.DEAD) {
+          break;
+        } else if (res == Board.MoveResult.HIT_OBSTACLE) {
           randomTurn();
         } else if (res == Board.MoveResult.ATE_TURBO) {
           turboTicks = 100;

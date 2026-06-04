@@ -41,6 +41,7 @@ public final class SnakeApp extends JFrame {
       var dir = Direction.values()[i % Direction.values().length];
       snakes.add(Snake.of(x, y, dir, i + 1));
     }
+    this.board.registerSnakes(snakes);
 
     this.pauseController.pause();
 
@@ -64,6 +65,7 @@ public final class SnakeApp extends JFrame {
 
     setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     pack();
+    setResizable(false);
     setLocationRelativeTo(null);
 
     this.clock = new GameClock(60, () -> SwingUtilities.invokeLater(gamePanel::repaint));
