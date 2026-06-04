@@ -39,7 +39,7 @@ public final class SnakeApp extends JFrame {
       int x = 2 + (i * 3) % board.width();
       int y = 2 + (i * 2) % board.height();
       var dir = Direction.values()[i % Direction.values().length];
-      snakes.add(Snake.of(x, y, dir));
+      snakes.add(Snake.of(x, y, dir, i + 1));
     }
 
     this.pauseController.pause();
@@ -277,6 +277,19 @@ public final class SnakeApp extends JFrame {
               Math.min(255, base.getGreen() + shade),
               Math.min(255, base.getBlue() + shade)));
           g2.fillRect(p.x() * CELL + 2, p.y() * CELL + 2, CELL - 4, CELL - 4);
+        }
+
+        var head = s.head();
+        if (head != null) {
+          int x = head.x() * CELL;
+          int y = head.y() * CELL;
+          g2.setColor(Color.BLACK);
+          g2.setFont(g2.getFont().deriveFont(Font.BOLD, 12f));
+          String label = String.valueOf(s.deathOrder());
+          FontMetrics fm = g2.getFontMetrics();
+          int textX = x + (CELL - fm.stringWidth(label)) / 2;
+          int textY = y + (CELL - fm.getHeight()) / 2 + fm.getAscent();
+          g2.drawString(label, textX, textY);
         }
         idx++;
       }

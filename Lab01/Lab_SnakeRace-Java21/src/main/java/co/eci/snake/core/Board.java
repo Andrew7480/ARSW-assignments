@@ -16,7 +16,7 @@ public final class Board {
   private final Set<Position> turbo = new HashSet<>();
   private final Map<Position, Position> teleports = new HashMap<>();
 
-  public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED}
+  public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED, DEAD}
 
   public Board(int width, int height) {
     if (width <= 0 || height <= 0) throw new IllegalArgumentException("Board dimensions must be positive");

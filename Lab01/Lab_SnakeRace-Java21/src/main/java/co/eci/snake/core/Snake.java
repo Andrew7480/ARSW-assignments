@@ -8,16 +8,21 @@ public final class Snake {
   private volatile Direction direction;
   private int maxLength = 5;
 
-  private Snake(Position start, Direction dir) {
+  private final int deathOrder;
+
+  private Snake(Position start, Direction dir, int deathOrder) {
     body.addFirst(start);
     this.direction = dir;
+    this.deathOrder = deathOrder;
   }
 
-  public static Snake of(int x, int y, Direction dir) {
-    return new Snake(new Position(x, y), dir);
+  public static Snake of(int x, int y, Direction dir, int deathOrder) {
+    return new Snake(new Position(x, y), dir, deathOrder);
   }
 
   public Direction direction() { return direction; }
+
+  public int deathOrder() { return deathOrder; }
 
   public synchronized void turn(Direction dir) {
     if ((direction == Direction.UP && dir == Direction.DOWN) ||
