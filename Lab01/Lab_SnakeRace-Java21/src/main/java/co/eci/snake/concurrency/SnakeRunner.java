@@ -24,6 +24,7 @@ public final class SnakeRunner implements Runnable {
 
   @Override
   public void run() {
+    pauseController.registerWorker();
     try {
       while (!Thread.currentThread().isInterrupted() && snake.isAlive()) {
         try { 
@@ -52,6 +53,8 @@ public final class SnakeRunner implements Runnable {
       }
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
+    } finally {
+      pauseController.unregisterWorker();
     }
   }
 

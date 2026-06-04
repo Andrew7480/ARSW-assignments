@@ -9,21 +9,22 @@ public final class Snake {
   private int maxLength = 5;
   private volatile boolean alive = true;
 
-  private final int deathOrder;
+  private final int snakeNumber;
+  private int deathRank = 0;
 
-  private Snake(Position start, Direction dir, int deathOrder) {
+  private Snake(Position start, Direction dir, int snakeNumber) {
     body.addFirst(start);
     this.direction = dir;
-    this.deathOrder = deathOrder;
+    this.snakeNumber = snakeNumber;
   }
 
-  public static Snake of(int x, int y, Direction dir, int deathOrder) {
-    return new Snake(new Position(x, y), dir, deathOrder);
+  public static Snake of(int x, int y, Direction dir, int snakeNumber) {
+    return new Snake(new Position(x, y), dir, snakeNumber);
   }
 
   public Direction direction() { return direction; }
 
-  public int deathOrder() { return deathOrder; }
+  public int snakeNumber() { return snakeNumber; }
 
   public synchronized void turn(Direction dir) {
     if ((direction == Direction.UP && dir == Direction.DOWN) ||
@@ -41,8 +42,14 @@ public final class Snake {
 
   public synchronized boolean isAlive() { return alive; }
 
-  public synchronized void die() {
+  public synchronized int deathRank() { return deathRank; }
+
+  public synchronized void die(int deathRank) {
+    if (!alive) {
+      return;
+    }
     alive = false;
+    this.deathRank = deathRank;
     body.clear();
   }
 

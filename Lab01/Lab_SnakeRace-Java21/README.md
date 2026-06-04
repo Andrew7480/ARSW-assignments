@@ -144,11 +144,25 @@ Justificamos cada cambio indicando el riesgo y la solución aplicada: si una reg
 
 ### 3) Control de ejecución seguro (UI)
 
-- Implementa la **UI** con **Iniciar / Pausar / Reanudar** (ya existe el botón _Action_ y el reloj `GameClock`).
-- Al **Pausar**, muestra de forma **consistente** (sin _tearing_) un resumen con:
-  - La **serpiente viva más larga**.
-  - La **peor serpiente** (la que **primero murió**).
-- Considera que la suspensión **no es instantánea**; coordina para que el estado mostrado no quede “a medias”.
+Se implementó el ciclo completo de ejecución con **Start / Pause / Resume** usando el botón **Action**, el `GameClock` y un `PauseController` compartido por todos los `SnakeRunner`.
+
+![resumen](docs/board.png)
+
+Cuando el usuario pulsa **Pause**, la UI no calcula el resumen inmediatamente. Primero cambia el estado a _"Waiting for a stable pause state..."_ y luego espera una **pausa estable**: esto significa que todos los runners activos ya llegaron al punto de espera (`wait`) y ninguno está aplicando un `step(...)` sobre el tablero.
+
+![resumen](docs/waiting.png)
+
+
+Solo cuando esa condición se cumple, la UI arma y publica el resumen:
+
+- **Serpiente viva más larga**: la serpiente con `isAlive() == true` y mayor longitud (`snapshot().size()`).
+- **Peor serpiente**: la que murió primero, usando un orden de muerte incremental asignado en `Board.killSnake(...)`.
+![resumen](docs/resume1.png)
+![resumen](docs/resume2.png)
+
+Con esta estrategia se evita el _tearing_ de estado al pausar, porque el resumen no se calcula en medio de un avance parcial.
+
+
 
 ### 4) Robustez bajo carga
 

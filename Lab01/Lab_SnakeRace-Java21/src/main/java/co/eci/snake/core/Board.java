@@ -17,6 +17,7 @@ public final class Board {
   private final Set<Position> turbo = new HashSet<>();
   private final Map<Position, Position> teleports = new HashMap<>();
   private List<Snake> snakes = List.of();
+  private int deathSequence = 0;
 
   public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED, DEAD}
 
@@ -108,7 +109,11 @@ public final class Board {
   }
 
   private void killSnake(Snake snake) {
-    snake.die();
+    if (!snake.isAlive()) {
+      return;
+    }
+    deathSequence++;
+    snake.die(deathSequence);
   }
 
   private Position randomEmpty() {

@@ -11,6 +11,7 @@ import co.eci.snake.core.engine.PauseController;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -181,6 +182,7 @@ public final class SnakeApp extends JFrame {
       clock.pause();
       pauseController.pause();
       statsLabel.setText("Waiting for a stable pause state...");
+      requestStablePauseSummary();
     } else {
       paused = false;
       statsLabel.setText("Running");
@@ -188,6 +190,47 @@ public final class SnakeApp extends JFrame {
       pauseController.resume();
       clock.resume();
     }
+  }
+
+  private void requestStablePauseSummary() {
+    Thread.ofVirtual().start(() -> {
+      try {
+        pauseController.awaitStablePause();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+
+      String summary = buildPauseSummary();
+      SwingUtilities.invokeLater(() -> {
+        if (paused && pauseController.isPaused()) {
+          statsLabel.setText(summary);
+          gamePanel.repaint();
+        }
+      });
+    });
+  }
+
+  private String buildPauseSummary() {
+    Snake longestAlive = snakes.stream()
+        .filter(Snake::isAlive)
+        .max(Comparator.comparingInt(s -> s.snapshot().size()))
+        .orElse(null);
+
+    Snake firstDead = snakes.stream()
+        .filter(s -> s.deathRank() > 0)
+        .min(Comparator.comparingInt(Snake::deathRank))
+        .orElse(null);
+
+    String longestText = (longestAlive == null)
+        ? "ninguna"
+        : "S" + longestAlive.snakeNumber() + " (len=" + longestAlive.snapshot().size() + ")";
+
+    String worstText = (firstDead == null)
+        ? "ninguna"
+        : "S" + firstDead.snakeNumber() + " (orden=" + firstDead.deathRank() + ")";
+
+    return "Pausa estable | Mas larga viva: " + longestText + " | Peor: " + worstText;
   }
 
   public static final class GamePanel extends JPanel {
@@ -287,7 +330,7 @@ public final class SnakeApp extends JFrame {
           int y = head.y() * CELL;
           g2.setColor(Color.BLACK);
           g2.setFont(g2.getFont().deriveFont(Font.BOLD, 12f));
-          String label = String.valueOf(s.deathOrder());
+          String label = String.valueOf(s.snakeNumber());
           FontMetrics fm = g2.getFontMetrics();
           int textX = x + (CELL - fm.stringWidth(label)) / 2;
           int textY = y + (CELL - fm.getHeight()) / 2 + fm.getAscent();
