@@ -57,42 +57,16 @@ co.eci.snake
 # Actividades del laboratorio
 
 ## Parte I — (Calentamiento) `wait/notify` en un programa multi-hilo
-### Objetivo
 
-Modificar `PrimeFinder` para que, cada `t` milisegundos, todos los hilos trabajadores se detengan, se muestre cuántos números primos se han encontrado y el programa espere ENTER para reanudar. La solución debe usar el modelo de monitores de Java sin espera activa.
+1. Toma el programa [**PrimeFinder**](https://github.com/ARSW-ECI/wait-notify-excercise).
+2. Modifícalo para que **cada _t_ milisegundos**:
+   - Se **pausen** todos los hilos trabajadores.
+   - Se **muestre** cuántos números primos se han encontrado.
+   - El programa **espere ENTER** para **reanudar**.
+3. La sincronización debe usar **`synchronized`**, **`wait()`**, **`notify()` / `notifyAll()`** sobre el **mismo monitor** (sin _busy-waiting_).
+4. Entrega en el reporte de laboratorio **las observaciones y/o comentarios** explicando tu diseño de sincronización (qué lock, qué condición, cómo evitas _lost wakeups_).
 
-### Implementación general
-
-La coordinación se concentra en `Control` y en un único monitor compartido. Los workers verifican una condición de pausa antes de continuar el procesamiento, mientras que el hilo principal activa y desactiva dicha pausa en intervalos regulares.
-
-### Diseño de sincronización
-
-- **Monitor compartido**: el objeto `monitor` de `Control` es el único lock usado para coordinar la pausa y la reanudación.
-- **Estado compartido**: la variable `paused` representa la condición de espera de los trabajadores.
-- **Lectura consistente**: `isPaused()` sincroniza sobre `monitor`, por lo que lee `paused` con el mismo lock que usan `wait()` y `notifyAll()`.
-- **Espera sin busy-waiting**: los workers ejecutan `while (control.isPaused()) { monitor.wait(); }`, liberando el monitor mientras esperan.
-- **Reanudación segura**: el hilo de control pone `paused = false` dentro de `synchronized(monitor)` y luego invoca `monitor.notifyAll()` para despertar a todos los hilos.
-
-### Flujo de ejecución
-
-1. `Control` inicia los hilos trabajadores.
-2. Cada `TMILISECONDS`, `Control` activa la pausa con `paused = true`.
-3. Se imprime el total de primos encontrados.
-4. El programa espera la entrada del usuario con `Scanner.nextLine()`.
-5. Al presionar ENTER, `Control` desactiva la pausa y llama a `notifyAll()`.
-6. Los workers retoman su ejecución desde el punto en el que quedaron suspendidos.
-
-### Cómo se evitan errores de sincronización
-
-- **Lost wakeups**: se usa un `while` alrededor de `wait()` para revalidar la condición después de cada despertar.
-- **Inconsistencia del estado**: la lectura y escritura de `paused` se hacen bajo el mismo monitor.
-- **Espera activa**: no se hace polling; los hilos quedan bloqueados dentro de `wait()` hasta que son despertados.
-
-
-### Conclusión
-
-La implementación aplica correctamente un esquema de pausa y reanudación basado en monitores en Java. El uso de un único lock compartido y de una condición explícita permite coordinar los hilos de manera segura, clara y sin consumo innecesario de CPU.
-
+> Objetivo didáctico: practicar suspensión/continuación **sin** espera activa y consolidar el modelo de monitores en Java.
 
 ---
 
