@@ -127,13 +127,25 @@ Por otro lado el control de ejecución está desacoplado entre la UI y los runne
 ### 2) Correcciones mínimas y regiones críticas
 
 - **Elimina** esperas activas reemplazándolas por **señales** / **estados** o mecanismos de la librería de concurrencia.
+
+Para eliminar las esperas activas, vamos a usar un `PauseController` que maneje un estado compartido de pausa y reanudación. La solución usa el modelo de monitores de Java (`synchronized`, `wait()` y `notifyAll()`) para bloquear y reanudar a los `SnakeRunner` sin hacer polling activo. Así evitamos consumir CPU innecesariamente y coordinamos la suspensión y la reanudación de forma segura.
+
 - Protege **solo** las **regiones críticas estrictamente necesarias** (evita bloqueos amplios).
-- Justifica en **`el reporte de laboratorio`** cada cambio: cuál era el riesgo y cómo lo resuelves.
+
+Aquí se dejan únicamente las secciones que modifican el estado compartido; no se sincronizan variables locales ni cálculos que no comparten memoria. El acceso a `Board` debe ser atómico porque es un recurso global compartido, mientras que la UI no debe bloquear todo el juego y por eso lee copias defensivas del tablero.
+
+En el caso de `Snake.snapshot()`, la idea es la misma: la UI trabaja sobre una copia del cuerpo para dibujar, pero si se quiere una consistencia total entre lectura y escritura, esa copia también debería coordinarse con sincronización adicional.
+
+Por esa razón `step(...)` sí debe ser `synchronized`, ya que ahí se lee y modifica el estado compartido del tablero. En cambio `randomEmpty()` no necesita sincronización adicional en este diseño, porque solo se invoca desde `step(...)` y desde el constructor, y en ambos casos ya está cubierto por el contexto de uso: `step(...)` entra dentro del lock de `Board`, y el constructor se ejecuta antes de que el objeto sea compartido con otros hilos.
+
+El método `createTeleportPairs(...)` también se usa únicamente durante la construcción del tablero, así que hoy tampoco necesita un bloqueo adicional. Si en el futuro se llama desde otros hilos o desde otro contexto fuera del constructor, entonces sí habría que revisar su sincronización.
+
+Justificamos cada cambio indicando el riesgo y la solución aplicada: si una región crítica compartía estado mutable, podía producir inconsistencias o carreras; por eso se protegió solo el acceso que realmente modifica el estado compartido y se dejaron fuera las variables locales y los cálculos que no comparten memoria.
 
 ### 3) Control de ejecución seguro (UI)
 
 - Implementa la **UI** con **Iniciar / Pausar / Reanudar** (ya existe el botón _Action_ y el reloj `GameClock`).
-- Al **Pausar**, muestra de forma **consistente** (sin _tearing_):
+- Al **Pausar**, muestra de forma **consistente** (sin _tearing_) un resumen con:
   - La **serpiente viva más larga**.
   - La **peor serpiente** (la que **primero murió**).
 - Considera que la suspensión **no es instantánea**; coordina para que el estado mostrado no quede “a medias”.

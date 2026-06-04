@@ -2,10 +2,13 @@ package co.eci.snake.core;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class Board {
   private final int width;
@@ -15,8 +18,9 @@ public final class Board {
   private final Set<Position> obstacles = new HashSet<>();
   private final Set<Position> turbo = new HashSet<>();
   private final Map<Position, Position> teleports = new HashMap<>();
+  private List<Snake> snakes = List.of();
 
-  public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED }
+  public enum MoveResult { MOVED, ATE_MOUSE, HIT_OBSTACLE, ATE_TURBO, TELEPORTED, DIED }
 
   public Board(int width, int height) {
     if (width <= 0 || height <= 0) throw new IllegalArgumentException("Board dimensions must be positive");
@@ -31,13 +35,23 @@ public final class Board {
   public int width() { return width; }
   public int height() { return height; }
 
+  public synchronized void setSnakes(List<Snake> snakes) {
+    this.snakes = new ArrayList<>(Objects.requireNonNull(snakes, "snakes"));
+  }
+
   public synchronized Set<Position> mice() { return new HashSet<>(mice); }
   public synchronized Set<Position> obstacles() { return new HashSet<>(obstacles); }
   public synchronized Set<Position> turbo() { return new HashSet<>(turbo); }
   public synchronized Map<Position, Position> teleports() { return new HashMap<>(teleports); }
 
-  public synchronized MoveResult step(Snake snake) {
+  public synchronized MoveResult step(Snake snake, AtomicInteger deathCounter) {
     Objects.requireNonNull(snake, "snake");
+    Objects.requireNonNull(deathCounter, "deathCounter");
+
+    if (!snake.isAlive()) {
+      return MoveResult.DIED;
+    }
+
     var head = snake.head();
     var dir = snake.direction();
     Position next = new Position(head.x() + dir.dx, head.y() + dir.dy).wrap(width, height);
@@ -48,6 +62,20 @@ public final class Board {
     if (teleports.containsKey(next)) {
       next = teleports.get(next);
       teleported = true;
+    }
+
+    for (Snake other : snakes) {
+      if (other == snake) continue;
+      var body = other.snapshot();
+      if (body.contains(next)) {
+        if (other.isAlive()) {
+          other.die(deathCounter.incrementAndGet());
+        }
+        if (snake.isAlive()) {
+          snake.die(deathCounter.incrementAndGet());
+        }
+        return MoveResult.DIED;
+      }
     }
 
     boolean ateMouse = mice.remove(next);
