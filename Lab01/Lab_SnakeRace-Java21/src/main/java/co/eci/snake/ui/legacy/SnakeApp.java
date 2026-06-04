@@ -11,11 +11,9 @@ import co.eci.snake.core.engine.PauseController;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class SnakeApp extends JFrame {
 
@@ -25,11 +23,9 @@ public final class SnakeApp extends JFrame {
   private final JButton actionButton;
   private final JLabel statsLabel;
   private final GameClock clock;
-  private final java.util.List<Snake> snakes = new java.util.ArrayList<>();
+  private final List<Snake> snakes = new java.util.ArrayList<>();
 
-  private final PauseController pauseController;
-  private final AtomicInteger deathCounter = new AtomicInteger(0);
-  private final java.util.concurrent.ExecutorService exec = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+  private final PauseController pauseController = new PauseController();
 
   private boolean started = false;
   private boolean paused = true;
@@ -46,9 +42,6 @@ public final class SnakeApp extends JFrame {
       snakes.add(Snake.of(x, y, dir));
     }
 
-    board.setSnakes(snakes);
-
-    this.pauseController = new PauseController(snakes.size());
     this.pauseController.pause();
 
     this.gamePanel = new GamePanel(board, () -> snakes);
@@ -75,7 +68,9 @@ public final class SnakeApp extends JFrame {
 
     this.clock = new GameClock(60, () -> SwingUtilities.invokeLater(gamePanel::repaint));
 
-    snakes.forEach(s -> exec.submit(new SnakeRunner(s, board, pauseController, deathCounter)));
+    var exec = Executors.newVirtualThreadPerTaskExecutor();
+    
+    snakes.forEach(s -> exec.submit(new SnakeRunner(s, board, pauseController)));
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> exec.shutdownNow()));
 
@@ -184,7 +179,6 @@ public final class SnakeApp extends JFrame {
       clock.pause();
       pauseController.pause();
       statsLabel.setText("Waiting for a stable pause state...");
-      waitForPausedStats();
     } else {
       paused = false;
       statsLabel.setText("Running");
@@ -192,42 +186,6 @@ public final class SnakeApp extends JFrame {
       pauseController.resume();
       clock.resume();
     }
-  }
-
-  private void waitForPausedStats() {
-    new Thread(() -> {
-      try {
-        if (!pauseController.awaitAllWorkersPaused()) {
-          return;
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        return;
-      }
-
-      var longestAlive = snakes.stream()
-          .filter(Snake::isAlive)
-          .max(Comparator.comparingInt(Snake::length))
-          .orElse(null);
-
-      var firstDead = snakes.stream()
-          .filter(s -> !s.isAlive())
-          .min(Comparator.comparingInt(Snake::deathOrder))
-          .orElse(null);
-
-      String text = buildPausedStats(longestAlive, firstDead);
-      SwingUtilities.invokeLater(() -> statsLabel.setText(text));
-    }).start();
-  }
-
-  private String buildPausedStats(Snake longestAlive, Snake firstDead) {
-    String aliveText = (longestAlive == null)
-        ? "Longest alive: none"
-        : "Longest alive: length " + longestAlive.length();
-    String deadText = (firstDead == null)
-        ? "First dead: none yet"
-        : "First dead: order " + firstDead.deathOrder() + ", length " + firstDead.length();
-    return "<html><div style='text-align:center;'>Paused summary<br>" + aliveText + "<br>" + deadText + "</div></html>";
   }
 
   public static final class GamePanel extends JPanel {

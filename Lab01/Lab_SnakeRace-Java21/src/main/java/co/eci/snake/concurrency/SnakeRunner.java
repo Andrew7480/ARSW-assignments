@@ -6,7 +6,6 @@ import co.eci.snake.core.Snake;
 import co.eci.snake.core.engine.PauseController;
 
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class SnakeRunner implements Runnable {
   private final Snake snake;
@@ -16,24 +15,17 @@ public final class SnakeRunner implements Runnable {
   private int turboTicks = 0;
 
   private final PauseController pauseController;
-  private final AtomicInteger deathCounter;
 
-  public SnakeRunner(Snake snake, Board board, PauseController pauseController, AtomicInteger deathCounter) {
+  public SnakeRunner(Snake snake, Board board, PauseController pauseController) {
     this.snake = snake;
     this.board = board;
     this.pauseController = pauseController;
-    this.deathCounter = deathCounter;
   }
 
   @Override
   public void run() {
-    pauseController.workerStarted();
     try {
       while (!Thread.currentThread().isInterrupted()) {
-        if (!snake.isAlive()) {
-          break;
-        }
-
         try { 
           pauseController.waitIfPaused();
         } catch (InterruptedException ie) {
@@ -42,13 +34,11 @@ public final class SnakeRunner implements Runnable {
         }
 
         maybeTurn();
-        var res = board.step(snake, deathCounter);
+        var res = board.step(snake);
         if (res == Board.MoveResult.HIT_OBSTACLE) {
           randomTurn();
         } else if (res == Board.MoveResult.ATE_TURBO) {
           turboTicks = 100;
-        } else if (res == Board.MoveResult.DIED) {
-          break;
         }
         int sleep = (turboTicks > 0) ? turboSleepMs : baseSleepMs;
         if (turboTicks > 0) turboTicks--;
@@ -56,8 +46,6 @@ public final class SnakeRunner implements Runnable {
       }
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-    } finally {
-      pauseController.workerFinished();
     }
   }
 
