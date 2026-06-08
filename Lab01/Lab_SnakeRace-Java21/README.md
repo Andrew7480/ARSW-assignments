@@ -166,13 +166,11 @@ Con esta estrategia se evita el _tearing_ de estado al pausar, porque el resumen
 
 ### 4) Robustez bajo carga
 
-- Ejecuta con **N alto** (`-Dsnakes=20` o más) y/o aumenta la velocidad.
-- El juego **no debe romperse**: sin `ConcurrentModificationException`, sin lecturas inconsistentes, sin _deadlocks_.
-- Si habilitas **teleports** y **turbo**, verifica que las reglas no introduzcan carreras.
+Al ejecutar el juego con un número alto de serpientes (por ejemplo, N = 20), no se presentan condiciones de carrera visibles ni problemas de estabilidad. Esto se debe a que las modificaciones sobre el estado compartido del tablero se realizan dentro de regiones críticas sincronizadas, evitando accesos concurrentes inseguros a las colecciones compartidas.
 
 ![resumen](docs/board20.png)
 
-
+![resumen](docs/running20.png)
 ---
 
 ## Entregables
