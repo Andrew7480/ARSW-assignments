@@ -1,4 +1,9 @@
 # Exercise 4.3
+La siguiente parte consiste en implementar el servidor. El servidor escucha en un puerto y responde a las solicitudes de cada cliente.
+
+![alt text](image-3.png)
+
+![alt text](image-4.png)
 
 1. Escriba un servidor que reciba un numero y responda el cuadrado de este numero.
 
