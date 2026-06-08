@@ -1,6 +1,10 @@
 import java.net.*;
 import java.io.*;
 
+/*
+*   Example of a simple HTTP server that listens on a port and responds with a basic HTML page when a client connects.
+*    clase que implementa un servidor web de un reques con TCP
+*/
 public class HttpServer {
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = null;
