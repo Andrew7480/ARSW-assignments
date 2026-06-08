@@ -1,7 +1,8 @@
+
 import java.net.*;
 import java.io.*;
 
-public class EchoServerExercise {
+public class SquareServerExercise {
     private static final int PORT = 35000;
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = null;
@@ -25,12 +26,14 @@ public class EchoServerExercise {
 
         String inputLine, outputLine;
 
+        System.out.println("Server is running and waiting for client input...");
+
         while ((inputLine = in.readLine()) != null) {
             try {
-                int number = Integer.parseInt(inputLine);
+                double number = Double.parseDouble(inputLine);
                 outputLine = "The square of the number is: " + square(number);
                 out.println(outputLine);
-            } catch (Exception e) {
+            } catch (NumberFormatException e) {
                 out.println("Error: Input is not a number " + e.getMessage());
             }
         }
@@ -41,7 +44,7 @@ public class EchoServerExercise {
         serverSocket.close();
     }
 
-    public static int square(int number) {
+    public static double square(double number) {
         return number * number;
     }
 }

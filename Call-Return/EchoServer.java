@@ -24,6 +24,7 @@ public class EchoServer {
         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         String inputLine, outputLine;
+        System.out.println("Server is running and waiting for client input...");
         while ((inputLine = in.readLine()) != null) {
             System.out.println("Mensaje: " + inputLine);
             outputLine = "Respuesta: " + inputLine;

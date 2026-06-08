@@ -19,6 +19,7 @@ public class EchoClientExercise {
         }
         BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
         String userInput;
+        System.out.println("Connected to server. Type your messages:");
         while ((userInput = stdIn.readLine()) != null) {
             out.println(userInput);
             System.out.println("echo: " + in.readLine());
