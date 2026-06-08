@@ -1,6 +1,10 @@
 import java.io.*;
 import java.net.*;
 
+/*
+    Example of a client that connects to a server, sends messages, and prints the responses from the server.
+    clase cliente que envía datos y recibe respuestas
+*/
 public class EchoClient {
     public static void main(String[] args) throws IOException {
         Socket echoSocket = null;

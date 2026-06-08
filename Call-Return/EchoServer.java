@@ -1,6 +1,10 @@
 import java.net.*;
 import java.io.*;
 
+/*
+*   Example of a server that listens on a port and echoes back any messages sent by the client.
+*    clase servidor que regresa el mismo mensaje que lee
+*/
 public class EchoServer {
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = null;
