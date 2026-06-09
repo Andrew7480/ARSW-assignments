@@ -19,11 +19,8 @@ public class MatrixGameApplication {
 
 		GameEngine engine = new GameEngine(config);
 
-		BoardPrinter.print(engine.getBoard());
-
 		engine.initializeGame();
 
-		BoardPrinter.print(engine.getBoard());
-		
+		engine.startGame();
 	}
 }

@@ -71,6 +71,38 @@ public class Board {
                         .equals(position));
     }
 
+    public synchronized boolean moveNeo() {
+        Position nextPosition = neo.calculateNextMove(this);
+        if (!isInside(nextPosition)) {
+            return false;
+        }
+
+        if (isWall(nextPosition)) {
+            return false;
+        }
+
+        neo.setPosition(nextPosition);
+
+        return true;
+    }
+
+    public synchronized boolean moveAgent(Agent agent) {
+
+        Position nextPosition = agent.calculateNextMove(this);
+
+        if (!isInside(nextPosition)) {
+            return false;
+        }
+
+        if (isWall(nextPosition)) {
+            return false;
+        }
+
+        agent.setPosition(nextPosition);
+
+        return true;
+    }
+
     public boolean isFree(Position position) {
 
         if (neo != null && neo.getPosition().equals(position)) {
@@ -161,13 +193,17 @@ public class Board {
 
         Position right = new Position(current.row(), current.col() + 1);
 
-        if (isInside(up)) neighbors.add(up);
+        if (isInside(up))
+            neighbors.add(up);
 
-        if (isInside(down)) neighbors.add(down);
+        if (isInside(down))
+            neighbors.add(down);
 
-        if (isInside(left)) neighbors.add(left);
+        if (isInside(left))
+            neighbors.add(left);
 
-        if (isInside(right)) neighbors.add(right);
+        if (isInside(right))
+            neighbors.add(right);
 
         return neighbors;
     }
@@ -175,6 +211,18 @@ public class Board {
     public boolean isWall(Position position) {
         return walls.stream()
                 .anyMatch(w -> w.getPosition()
+                        .equals(position));
+    }
+
+    public boolean hasAgent(Position position) {
+        return agents.stream()
+                .anyMatch(agent -> agent.getPosition()
+                        .equals(position));
+    }
+
+    public boolean isPhone(Position position) {
+        return phones.stream()
+                .anyMatch(phone -> phone.getPosition()
                         .equals(position));
     }
 }
