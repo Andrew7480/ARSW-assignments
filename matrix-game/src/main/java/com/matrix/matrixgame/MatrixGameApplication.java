@@ -24,6 +24,6 @@ public class MatrixGameApplication {
 		engine.initializeGame();
 
 		BoardPrinter.print(engine.getBoard());
-
+		
 	}
 }

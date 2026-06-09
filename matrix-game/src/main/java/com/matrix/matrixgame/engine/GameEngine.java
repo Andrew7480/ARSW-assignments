@@ -40,9 +40,16 @@ public class GameEngine {
             board.getAgents().add(agent);
         }
 
-        for (int i = 0; i < config.wallCount(); i++) {
+        int createdWalls = 0;
+        while (createdWalls < config.wallCount()) {
+
             Wall wall = EntityFactory.createWall(board.randomEmptyPosition());
             board.getWalls().add(wall);
+            if (board.pathExists()) {
+                createdWalls++;
+            } else {
+                board.getWalls().remove(wall);
+            }
         }
     }
 }

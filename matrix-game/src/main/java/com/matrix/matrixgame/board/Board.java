@@ -1,8 +1,12 @@
 package com.matrix.matrixgame.board;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 
 import com.matrix.matrixgame.entity.Agent;
 import com.matrix.matrixgame.entity.Neo;
@@ -95,7 +99,7 @@ public class Board {
     }
 
     public Position randomEmptyPosition() {
-
+        int attempts = 0;
         Position position;
         do {
 
@@ -105,8 +109,72 @@ public class Board {
 
             position = new Position(row, col);
 
+            attempts++;
+            if (attempts > size * size * 2) {
+                throw new RuntimeException("No empty positions available");
+            }
+
         } while (!isFree(position));
 
         return position;
+    }
+
+    public boolean pathExists() {
+
+        if (neo == null || phones.isEmpty()) {
+            return false;
+        }
+
+        Queue<Position> queue = new LinkedList<>();
+        Set<Position> visited = new HashSet<>();
+        Position start = neo.getPosition();
+
+        queue.add(start);
+        visited.add(start);
+
+        while (!queue.isEmpty()) {
+            Position current = queue.poll();
+            if (reachedPhone(current)) {
+                return true;
+            }
+            for (Position neighbor : getNeighbors(current)) {
+
+                if (!visited.contains(neighbor) && !isWall(neighbor)) {
+                    visited.add(neighbor);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private List<Position> getNeighbors(Position current) {
+
+        List<Position> neighbors = new ArrayList<>();
+
+        Position up = new Position(current.row() - 1, current.col());
+
+        Position down = new Position(current.row() + 1, current.col());
+
+        Position left = new Position(current.row(), current.col() - 1);
+
+        Position right = new Position(current.row(), current.col() + 1);
+
+        if (isInside(up)) neighbors.add(up);
+
+        if (isInside(down)) neighbors.add(down);
+
+        if (isInside(left)) neighbors.add(left);
+
+        if (isInside(right)) neighbors.add(right);
+
+        return neighbors;
+    }
+
+    public boolean isWall(Position position) {
+        return walls.stream()
+                .anyMatch(w -> w.getPosition()
+                        .equals(position));
     }
 }
