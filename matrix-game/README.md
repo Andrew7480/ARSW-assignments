@@ -1,11 +1,85 @@
 # Matrix Game
 
-## Descripción
+Simulación concurrente por turnos inspirada en la película Matrix. Neo intenta llegar a un teléfono para escapar; los agentes intentan capturarlo. Cada entidad se ejecuta en su propio hilo y todos se sincronizan por ronda mediante una `CyclicBarrier`.
 
-Matrix Game es una simulación concurrente inspirada en la película Matrix. El juego se desarrolla sobre un tablero de tamaño `n x n`, donde Neo debe encontrar un teléfono para escapar mientras evita ser capturado por los agentes.
+## Tecnologías
 
-Cada entidad del juego se ejecuta en su propio hilo de ejecución. Durante cada ronda, todos los personajes realizan sus movimientos de forma concurrente, mientras una barrera de sincronización garantiza que ningún hilo avance a la siguiente ronda hasta que todos hayan completado la actual.
+- Java 21
+- Maven
+- Spring Boot 3.5.3
 
-La aplicación se desarrolla utilizando **Java 21, Maven y Spring Boot**, proporcionando una interfaz gráfica que permite visualizar en tiempo real el estado del tablero, los movimientos de los personajes y el avance de la simulación.
+## Cómo ejecutar
 
-Este proyecto tiene como objetivo aplicar conceptos de concurrencia, sincronización mediante barreras, programación orientada a objetos y desarrollo de aplicaciones con interfaz visual.
+```bash
+mvn spring-boot:run
+```
+
+El tablero se imprime en consola al inicio de cada ronda. Presiona **ENTER** para avanzar a la siguiente.
+
+## Tablero
+
+```
+. . . . T . . . . .
+. # . . . . # . . .
+. . . . . A . . . .
+. . # . N . . . . .
+. . . . . . . A . .
+```
+
+| Símbolo | Entidad   |
+|---------|-----------|
+| `N`     | Neo       |
+| `A`     | Agente    |
+| `T`     | Teléfono  |
+| `#`     | Muro      |
+| `.`     | Celda libre |
+
+## Arquitectura concurrente
+
+Cada ronda se divide en dos fases separadas por barreras:
+
+```
+NeoWorker      ──┐
+AgentWorker 1  ──┤── barrier 1 (todos calcularon)
+AgentWorker 2  ──┤                    │
+AgentWorker 3  ──┘            RoundCoordinator
+                                aplica movimientos
+                                evalúa estado
+                                imprime tablero
+                                espera ENTER
+NeoWorker      ──┐                    │
+AgentWorker 1  ──┤── barrier 2 (todos pueden avanzar)
+AgentWorker 2  ──┤
+AgentWorker 3  ──┘
+```
+
+- **Fase 1:** cada worker calcula su próxima posición (`nextPosition`) pero no modifica el tablero.
+- **Fase 2:** el `RoundCoordinator` aplica todos los movimientos, evalúa si el juego terminó e imprime el tablero.
+- La barrera tiene `agentCount + 2` participantes (Neo + agentes + coordinador).
+
+## Estrategias de movimiento
+
+| Entidad | Estrategia           | Descripción                                        |
+|---------|----------------------|----------------------------------------------------|
+| Neo     | `NeoPathStrategy`    | BFS hacia el teléfono más cercano                  |
+| Agentes | `AgentChaseStrategy` | BFS hacia la posición actual de Neo                |
+
+Ambas estrategias extienden `BfsMovementStrategy`, que calcula el primer paso del camino más corto respetando muros y límites del tablero.
+
+## Condiciones de victoria
+
+- **Neo escapa:** Neo llega a la posición de un teléfono.
+- **Agentes capturan:** un agente llega a la misma posición que Neo.
+
+## Configuración
+
+En `MatrixGameApplication.java`:
+
+```java
+GameConfig config = new GameConfig(
+    10,  // tamaño del tablero (n x n)
+    15,  // cantidad de muros
+    3,   // cantidad de agentes
+    2    // cantidad de teléfonos
+);
+```
