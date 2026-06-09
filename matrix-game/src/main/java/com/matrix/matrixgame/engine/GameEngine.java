@@ -1,5 +1,10 @@
 package com.matrix.matrixgame.engine;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.CyclicBarrier;
+
 import com.matrix.matrixgame.board.Board;
 import com.matrix.matrixgame.board.BoardPrinter;
 import com.matrix.matrixgame.board.Position;
@@ -7,6 +12,9 @@ import com.matrix.matrixgame.entity.Agent;
 import com.matrix.matrixgame.entity.Phone;
 import com.matrix.matrixgame.entity.Wall;
 import com.matrix.matrixgame.factory.EntityFactory;
+import com.matrix.matrixgame.worker.AgentWorker;
+import com.matrix.matrixgame.worker.NeoWorker;
+import com.matrix.matrixgame.worker.RoundCoordinator;
 
 public class GameEngine {
 
@@ -59,30 +67,39 @@ public class GameEngine {
 
     public void startGame() {
         BoardPrinter.print(board);
-        
-        while (gameState == GameState.RUNNING) {
 
-            board.moveNeo();
+        // Neo + agents + coordinator
+        int parties = board.getAgents().size() + 2;
+        CyclicBarrier barrier = new CyclicBarrier(parties);
+        Scanner scanner = new Scanner(System.in);
 
-            for (Agent agent : board.getAgents()) {
-                board.moveAgent(agent);
-            }
+        NeoWorker neoWorker = new NeoWorker(board.getNeo(), board, this, barrier);
 
-            evaluateGameState();
-
-            BoardPrinter.print(board);
-        }
-        if (gameState == GameState.NEO_WON) {
-            System.out.println("Neo escaped through a phone.");
+        List<AgentWorker> agentWorkers = new ArrayList<>();
+        for (Agent agent : board.getAgents()) {
+            agentWorkers.add(new AgentWorker(agent, board, this, barrier));
         }
 
-        if (gameState == GameState.AGENTS_WON) {
-            System.out.println("Agents captured Neo.");
+        RoundCoordinator coordinator = new RoundCoordinator(this, board, barrier, scanner);
+
+        neoWorker.start();
+        agentWorkers.forEach(Thread::start);
+        coordinator.start();
+
+        try {
+            neoWorker.join();
+            for (AgentWorker w : agentWorkers) w.join();
+            coordinator.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
-    private void evaluateGameState() {
+    public boolean isRunning() {
+        return gameState == GameState.RUNNING;
+    }
 
+    public void evaluateState() {
         Position neoPosition = board.getNeo().getPosition();
 
         boolean reachedPhone = board.getPhones()

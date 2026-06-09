@@ -71,35 +71,21 @@ public class Board {
                         .equals(position));
     }
 
-    public synchronized boolean moveNeo() {
-        Position nextPosition = neo.calculateNextMove(this);
-        if (!isInside(nextPosition)) {
+    public synchronized boolean applyNeoMove() {
+        Position next = neo.getNextPosition();
+        if (next == null || !isInside(next) || isWall(next)) {
             return false;
         }
-
-        if (isWall(nextPosition)) {
-            return false;
-        }
-
-        neo.setPosition(nextPosition);
-
+        neo.setPosition(next);
         return true;
     }
 
-    public synchronized boolean moveAgent(Agent agent) {
-
-        Position nextPosition = agent.calculateNextMove(this);
-
-        if (!isInside(nextPosition)) {
+    public synchronized boolean applyAgentMove(Agent agent) {
+        Position next = agent.getNextPosition();
+        if (next == null || !isInside(next) || isWall(next)) {
             return false;
         }
-
-        if (isWall(nextPosition)) {
-            return false;
-        }
-
-        agent.setPosition(nextPosition);
-
+        agent.setPosition(next);
         return true;
     }
 

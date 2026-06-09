@@ -8,6 +8,8 @@ public abstract class MovableEntity extends Entity {
 
     protected final MovementStrategy strategy;
 
+    private volatile Position nextPosition;
+
     protected MovableEntity(Position position, String symbol, MovementStrategy strategy) {
         super(position, symbol);
         this.strategy = strategy;
@@ -15,5 +17,13 @@ public abstract class MovableEntity extends Entity {
 
     public Position calculateNextMove(Board board) {
         return strategy.nextMove(position, board);
+    }
+
+    public void setNextPosition(Position nextPosition) {
+        this.nextPosition = nextPosition;
+    }
+
+    public Position getNextPosition() {
+        return nextPosition;
     }
 }

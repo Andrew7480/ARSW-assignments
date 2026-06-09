@@ -2,7 +2,6 @@ package com.matrix.matrixgame;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.matrix.matrixgame.board.BoardPrinter;
 import com.matrix.matrixgame.engine.GameConfig;
 import com.matrix.matrixgame.engine.GameEngine;
 
