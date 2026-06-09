@@ -82,7 +82,7 @@ public class Board {
 
     public synchronized boolean applyAgentMove(Agent agent) {
         Position next = agent.getNextPosition();
-        if (next == null || !isInside(next) || isWall(next)) {
+        if (next == null || !isInside(next) || isWall(next) || isPhone(next)) {
             return false;
         }
         agent.setPosition(next);

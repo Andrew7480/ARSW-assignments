@@ -2,7 +2,7 @@ package com.matrix.matrixgame.engine;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CyclicBarrier;
 
 import com.matrix.matrixgame.board.Board;
@@ -24,9 +24,10 @@ public class GameEngine {
 
     private volatile GameState gameState = GameState.RUNNING;
 
+    private final List<BoardObserver> observers = new CopyOnWriteArrayList<>();
+
     public GameEngine(GameConfig config) {
         this.config = config;
-
         this.board = new Board(config.boardSize());
     }
 
@@ -36,6 +37,15 @@ public class GameEngine {
 
     public GameConfig getConfig() {
         return config;
+    }
+
+    public void addObserver(BoardObserver observer) {
+        observers.add(observer);
+    }
+
+    public void notifyObservers() {
+        GameState state = gameState;
+        observers.forEach(o -> o.onRoundEnd(board, state));
     }
 
     public void initializeGame() {
@@ -54,7 +64,6 @@ public class GameEngine {
 
         int createdWalls = 0;
         while (createdWalls < config.wallCount()) {
-
             Wall wall = EntityFactory.createWall(board.randomEmptyPosition());
             board.getWalls().add(wall);
             if (board.pathExists()) {
@@ -65,13 +74,11 @@ public class GameEngine {
         }
     }
 
-    public void startGame() {
+    public void startGame(RoundGate gate) {
         BoardPrinter.print(board);
 
-        // Neo + agents + coordinator
-        int parties = board.getAgents().size() + 2;
+        int parties = board.getAgents().size() + 2; // Neo + agents + coordinator
         CyclicBarrier barrier = new CyclicBarrier(parties);
-        Scanner scanner = new Scanner(System.in);
 
         NeoWorker neoWorker = new NeoWorker(board.getNeo(), board, this, barrier);
 
@@ -80,7 +87,7 @@ public class GameEngine {
             agentWorkers.add(new AgentWorker(agent, board, this, barrier));
         }
 
-        RoundCoordinator coordinator = new RoundCoordinator(this, board, barrier, scanner);
+        RoundCoordinator coordinator = new RoundCoordinator(this, board, barrier, gate);
 
         neoWorker.start();
         agentWorkers.forEach(Thread::start);

@@ -1,25 +1,15 @@
 package com.matrix.matrixgame;
 
+import javax.swing.SwingUtilities;
+
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.matrix.matrixgame.engine.GameConfig;
-import com.matrix.matrixgame.engine.GameEngine;
+import com.matrix.matrixgame.ui.MatrixGameUI;
 
 @SpringBootApplication
 public class MatrixGameApplication {
 
 	public static void main(String[] args) {
-		GameConfig config = new GameConfig(
-				10, // tamaño tablero
-				15, // muros
-				3, // agentes
-				2 // teléfonos
-		);
-
-		GameEngine engine = new GameEngine(config);
-
-		engine.initializeGame();
-
-		engine.startGame();
+		SwingUtilities.invokeLater(MatrixGameUI::new);
 	}
 }

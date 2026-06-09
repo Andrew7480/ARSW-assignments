@@ -66,6 +66,8 @@ AgentWorker 3  ──┘
 
 Ambas estrategias extienden `BfsMovementStrategy`, que calcula el primer paso del camino más corto respetando muros y límites del tablero.
 
+> Los agentes no pueden pararse sobre teléfonos — solo Neo puede ocupar esas celdas.
+
 ## Condiciones de victoria
 
 - **Neo escapa:** Neo llega a la posición de un teléfono.

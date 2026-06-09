@@ -1,6 +1,5 @@
 package com.matrix.matrixgame.worker;
 
-import java.util.Scanner;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
@@ -8,19 +7,20 @@ import com.matrix.matrixgame.board.Board;
 import com.matrix.matrixgame.board.BoardPrinter;
 import com.matrix.matrixgame.engine.GameEngine;
 import com.matrix.matrixgame.engine.GameState;
+import com.matrix.matrixgame.engine.RoundGate;
 
 public class RoundCoordinator extends Thread {
 
     private final GameEngine engine;
     private final Board board;
     private final CyclicBarrier barrier;
-    private final Scanner scanner;
+    private final RoundGate gate;
 
-    public RoundCoordinator(GameEngine engine, Board board, CyclicBarrier barrier, Scanner scanner) {
+    public RoundCoordinator(GameEngine engine, Board board, CyclicBarrier barrier, RoundGate gate) {
         this.engine = engine;
         this.board = board;
         this.barrier = barrier;
-        this.scanner = scanner;
+        this.gate = gate;
     }
 
     @Override
@@ -36,10 +36,10 @@ public class RoundCoordinator extends Thread {
 
                 engine.evaluateState();
                 BoardPrinter.print(board);
+                engine.notifyObservers(); // update GUI
 
                 if (engine.isRunning()) {
-                    System.out.println("Presiona ENTER para la siguiente ronda...");
-                    scanner.nextLine();
+                    gate.waitForNext(); // wait for button/ENTER in GUI
                 }
 
                 barrier.await(); // phase 2: workers check state and proceed or exit
