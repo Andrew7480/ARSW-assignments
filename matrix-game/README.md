@@ -1,22 +1,22 @@
 # Matrix Game
 
-Simulación concurrente por turnos inspirada en la película Matrix. Neo intenta llegar a un teléfono para escapar; los agentes intentan capturarlo. Cada entidad se ejecuta en su propio hilo y todos se sincronizan por ronda mediante una `CyclicBarrier`.
+A turn-based concurrent simulation inspired by the Matrix movie. Neo tries to reach a phone to escape; agents try to capture him. Each entity runs in its own thread and all of them synchronize per round via a `CyclicBarrier`.
 
-## Tecnologías
+## Technologies
 
 - Java 21
 - Maven
 - Spring Boot 3.5.3
 
-## Cómo ejecutar
+## How to run
 
 ```bash
 mvn spring-boot:run
 ```
 
-El tablero se imprime en consola al inicio de cada ronda. Presiona **ENTER** para avanzar a la siguiente.
+The board is printed to the console at the start of each round. Press **ENTER** to advance to the next one.
 
-## Tablero
+## Board
 
 ```
 . . . . T . . . . .
@@ -26,62 +26,62 @@ El tablero se imprime en consola al inicio de cada ronda. Presiona **ENTER** par
 . . . . . . . A . .
 ```
 
-| Símbolo | Entidad   |
-|---------|-----------|
-| `N`     | Neo       |
-| `A`     | Agente    |
-| `T`     | Teléfono  |
-| `#`     | Muro      |
-| `.`     | Celda libre |
+| Symbol | Entity      |
+|--------|-------------|
+| `N`    | Neo         |
+| `A`    | Agent       |
+| `T`    | Telephone   |
+| `#`    | Wall        |
+| `.`    | Empty cell  |
 
-## Arquitectura concurrente
+## Concurrent Architecture
 
-Cada ronda se divide en dos fases separadas por barreras:
+Each round is divided into two phases separated by barriers:
 
 ```
 NeoWorker      ──┐
-AgentWorker 1  ──┤── barrier 1 (todos calcularon)
+AgentWorker 1  ──┤── barrier 1 (all computed next move)
 AgentWorker 2  ──┤                    │
 AgentWorker 3  ──┘            RoundCoordinator
-                                aplica movimientos
-                                evalúa estado
-                                imprime tablero
-                                espera ENTER
+                                applies movements
+                                evaluates game state
+                                prints board
+                                waits for ENTER
 NeoWorker      ──┐                    │
-AgentWorker 1  ──┤── barrier 2 (todos pueden avanzar)
+AgentWorker 1  ──┤── barrier 2 (all may proceed)
 AgentWorker 2  ──┤
 AgentWorker 3  ──┘
 ```
 
-- **Fase 1:** cada worker calcula su próxima posición (`nextPosition`) pero no modifica el tablero.
-- **Fase 2:** el `RoundCoordinator` aplica todos los movimientos, evalúa si el juego terminó e imprime el tablero.
-- La barrera tiene `agentCount + 2` participantes (Neo + agentes + coordinador).
+- **Phase 1:** each worker computes its next position (`nextPosition`) without modifying the board.
+- **Phase 2:** the `RoundCoordinator` applies all movements, evaluates whether the game has ended, and prints the board.
+- The barrier has `agentCount + 2` participants (Neo + agents + coordinator).
 
-## Estrategias de movimiento
+## Movement Strategies
 
-| Entidad | Estrategia           | Descripción                                        |
-|---------|----------------------|----------------------------------------------------|
-| Neo     | `NeoPathStrategy`    | BFS hacia el teléfono más cercano                  |
-| Agentes | `AgentChaseStrategy` | BFS hacia la posición actual de Neo                |
+| Entity | Strategy             | Description                                          |
+|--------|----------------------|------------------------------------------------------|
+| Neo    | `NeoPathStrategy`    | BFS toward the nearest telephone                     |
+| Agents | `AgentChaseStrategy` | BFS toward Neo's current position                    |
 
-Ambas estrategias extienden `BfsMovementStrategy`, que calcula el primer paso del camino más corto respetando muros y límites del tablero.
+Both strategies extend `BfsMovementStrategy`, which computes the first step of the shortest path while respecting walls and board boundaries.
 
-> Los agentes no pueden pararse sobre teléfonos — solo Neo puede ocupar esas celdas.
+> Agents cannot stand on telephone cells — only Neo can occupy them.
 
-## Condiciones de victoria
+## Win Conditions
 
-- **Neo escapa:** Neo llega a la posición de un teléfono.
-- **Agentes capturan:** un agente llega a la misma posición que Neo.
+- **Neo escapes:** Neo reaches a telephone cell.
+- **Agents capture:** an agent reaches the same position as Neo.
 
-## Configuración
+## Configuration
 
-En `MatrixGameApplication.java`:
+In `MatrixGameApplication.java`:
 
 ```java
 GameConfig config = new GameConfig(
-    10,  // tamaño del tablero (n x n)
-    15,  // cantidad de muros
-    3,   // cantidad de agentes
-    2    // cantidad de teléfonos
+    10,  // board size (n x n)
+    15,  // number of walls
+    3,   // number of agents
+    2    // number of telephones
 );
 ```

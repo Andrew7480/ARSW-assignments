@@ -1,13 +1,13 @@
 
-## Requisitos
+## Requirements
 
-- **JDK 21** (Temurin recomendado)
-- **Maven 3.9+**
-- SO: Windows, macOS o Linux
+- **JDK 21** (Temurin recommended)
+- **Maven 3.9+**
+- OS: Windows, macOS or Linux
 
 ---
 
-## Cómo ejecutar
+## How to run
 
 ```bash
 mvn clean verify

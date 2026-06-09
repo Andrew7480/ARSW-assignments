@@ -1,221 +1,217 @@
-# Snake Race — ARSW Lab #2 (Java 21, Virtual Threads)
+# Snake Race — ARSW Lab #2 (Java 21, Virtual Threads)
 
-**Escuela Colombiana de Ingeniería – Arquitecturas de Software**  
-Laboratorio de programación concurrente: condiciones de carrera, sincronización y colecciones seguras.
+**Escuela Colombiana de Ingeniería – Software Architectures**  
+Concurrent programming lab: race conditions, synchronization, and thread-safe collections.
 
-Repositorio del laboratorio: https://github.com/DECSIS-ECI/Lab_SnakeRace-Java21
-
----
-
-## Requisitos
-
-- **JDK 21** (Temurin recomendado)
-- **Maven 3.9+**
-- SO: Windows, macOS o Linux
+Lab repository: https://github.com/DECSIS-ECI/Lab_SnakeRace-Java21
 
 ---
 
-## Cómo ejecutar
+## Requirements
+
+- **JDK 21** (Temurin recommended)
+- **Maven 3.9+**
+- OS: Windows, macOS or Linux
+
+---
+
+## How to run
 
 ```bash
 mvn clean verify
 mvn -q -DskipTests exec:java -Dsnakes=4
 ```
 
-- `-Dsnakes=N` → inicia el juego con **N** serpientes (por defecto 2).
-- **Controles**:
-  - **Flechas**: serpiente **0** (Jugador 1).
-  - **WASD**: serpiente **1** (si existe).
-  - **Espacio** o botón **Action**: Pausar / Reanudar.
+- `-Dsnakes=N` → starts the game with **N** snakes (default: 2).
+- **Controls**:
+  - **Arrow keys**: snake **0** (Player 1).
+  - **WASD**: snake **1** (if it exists).
+  - **Space** or **Action** button: Pause / Resume.
 
 ---
 
-## Reglas del juego (resumen)
+## Game Rules (summary)
 
-- **N serpientes** corren de forma autónoma (cada una en su propio hilo).
-- **Ratones**: al comer uno, la serpiente **crece** y aparece un **nuevo obstáculo**.
-- **Obstáculos**: si la cabeza entra en un obstáculo hay **rebote**.
-- **Teletransportadores** (flechas rojas): entrar por uno te **saca por su par**.
-- **Rayos (Turbo)**: al pisarlos, la serpiente obtiene **velocidad aumentada** temporal.
-- Movimiento con **wrap-around** (el tablero “se repite” en los bordes).
+- **N snakes** run autonomously (each in its own thread).
+- **Mice**: eating one makes the snake **grow** and spawns a **new obstacle**.
+- **Obstacles**: if the head enters an obstacle, the snake **bounces**.
+- **Teleporters** (red arrows): entering one takes you **out through its pair**.
+- **Lightning bolts (Turbo)**: stepping on one grants the snake a temporary **speed boost**.
+- Movement uses **wrap-around** (the board "wraps" at the edges).
 
 ---
 
-## Arquitectura (carpetas)
+## Architecture (folders)
 
 ```
 co.eci.snake
-├─ app/                 # Bootstrap de la aplicación (Main)
-├─ core/                # Dominio: Board, Snake, Direction, Position
-├─ core/engine/         # GameClock (ticks, Pausa/Reanudar)
-├─ concurrency/         # SnakeRunner (lógica por serpiente con virtual threads)
-└─ ui/legacy/           # UI estilo legado (Swing) con grilla y botón Action
+├─ app/                 # Application bootstrap (Main)
+├─ core/                # Domain: Board, Snake, Direction, Position
+├─ core/engine/         # GameClock (ticks, Pause/Resume)
+├─ concurrency/         # SnakeRunner (per-snake logic with virtual threads)
+└─ ui/legacy/           # Legacy-style Swing UI with grid and Action button
 ```
 
 ---
 
-# Actividades del laboratorio
+# Lab Activities
 
-## Parte I — (Calentamiento) `wait/notify` en un programa multi-hilo
+## Part I — (Warm-up) `wait/notify` in a multi-threaded program
 
-Modificamos `PrimeFinder` para que, cada `t` milisegundos, todos los hilos trabajadores se detengan, se muestre cuántos números primos se han encontrado y el programa espere ENTER para reanudar. La solución usa el modelo de monitores de Java sin espera activa.
+We modified `PrimeFinder` so that every `t` milliseconds all worker threads stop, the number of primes found is displayed, and the program waits for ENTER to resume. The solution uses Java's monitor model without busy-waiting.
 
-La coordinación se concentra en `Control` y en un único monitor compartido. Los workers verifican una condición de pausa antes de continuar el procesamiento, mientras que el hilo principal activa y desactiva dicha pausa en intervalos regulares.
+Coordination is concentrated in `Control` and a single shared monitor. Workers check a pause condition before continuing processing, while the main thread activates and deactivates that pause at regular intervals.
 
-### Diseño de sincronización
+### Synchronization Design
 
-- **Monitor compartido**: el objeto `monitor` de `Control` es el único lock usado para coordinar la pausa y la reanudación.
-- **Estado compartido**: la variable `paused` representa la condición de espera de los trabajadores.
-- **Lectura consistente**: `isPaused()` sincroniza sobre `monitor`, por lo que lee `paused` con el mismo lock que usan `wait()` y `notifyAll()`.
-- **Espera sin busy-waiting**: los workers ejecutan `while (control.isPaused()) { monitor.wait(); }`, liberando el monitor mientras esperan.
-- **Reanudación segura**: el hilo de control pone `paused = false` dentro de `synchronized(monitor)` y luego invoca `monitor.notifyAll()` para despertar a todos los hilos.
+- **Shared monitor**: the `monitor` object in `Control` is the only lock used to coordinate pausing and resuming.
+- **Shared state**: the `paused` variable represents the workers' wait condition.
+- **Consistent reads**: `isPaused()` synchronizes on `monitor`, so it reads `paused` under the same lock used by `wait()` and `notifyAll()`.
+- **No busy-waiting**: workers execute `while (control.isPaused()) { monitor.wait(); }`, releasing the monitor while they wait.
+- **Safe resume**: the control thread sets `paused = false` inside `synchronized(monitor)` and then calls `monitor.notifyAll()` to wake all threads.
 
-### Flujo de ejecución
+### Execution Flow
 
-1. `Control` inicia los hilos trabajadores.
-2. Cada `TMILISECONDS`, `Control` activa la pausa con `paused = true`.
-3. Se imprime el total de primos encontrados.
-4. El programa espera la entrada del usuario con `Scanner.nextLine()`.
-5. Al presionar ENTER, `Control` desactiva la pausa y llama a `notifyAll()`.
-6. Los workers retoman su ejecución desde el punto en el que quedaron suspendidos.
+1. `Control` starts the worker threads.
+2. Every `TMILISECONDS`, `Control` activates the pause by setting `paused = true`.
+3. The total number of primes found is printed.
+4. The program waits for user input via `Scanner.nextLine()`.
+5. When ENTER is pressed, `Control` deactivates the pause and calls `notifyAll()`.
+6. Workers resume execution from the point where they were suspended.
 
-### Cómo se evitan errores de sincronización
+### How Synchronization Errors Are Avoided
 
-- **Lost wakeups**: se usa un `while` alrededor de `wait()` para revalidar la condición después de cada despertar.
-- **Inconsistencia del estado**: la lectura y escritura de `paused` se hacen bajo el mismo monitor.
-- **Espera activa**: no se hace polling; los hilos quedan bloqueados dentro de `wait()` hasta que son despertados.
+- **Lost wakeups**: a `while` loop wraps `wait()` to re-validate the condition after each wakeup.
+- **State inconsistency**: reads and writes to `paused` are done under the same monitor.
+- **Busy-waiting**: no polling is done; threads block inside `wait()` until they are woken up.
 
-
-El uso de un único lock compartido y de una condición explícita permite coordinar los hilos de manera segura, clara y sin consumo innecesario de CPU.
-
+Using a single shared lock and an explicit condition allows threads to be coordinated safely, clearly, and without unnecessary CPU consumption.
 
 ---
 
-## Parte II — SnakeRace concurrente (núcleo del laboratorio)
+## Part II — Concurrent SnakeRace (core of the lab)
 
-### 1) Análisis de concurrencia
+### 1) Concurrency Analysis
 
-El código da autonomía a cada serpiente usando un `SnakeRunner` por serpiente. Cada runner ejecuta su propio ciclo: decide giros, avanza, reacciona al resultado del movimiento y duerme un tiempo corto antes del siguiente paso. En otras palabras, cada serpiente “piensa” y se mueve por su cuenta; no existe un hilo central que mueva a todas.
+The code gives each snake autonomy via a dedicated `SnakeRunner`. Each runner runs its own cycle: decides turns, advances, reacts to the movement result, and sleeps briefly before the next step. In other words, each snake "thinks" and moves on its own; there is no central thread that moves all of them.
 
-Por otro lado el sistema tiene dos caminos concurrentes principales: los hilos de las serpientes, que actualizan el modelo del juego, y la UI, que repinta el tablero y consulta el estado para mostrarlo.
-El `GameClock` controla estos repintados y el estado visual de la interfaz, pero no es quien mueve a las serpientes. Por eso, pausar la UI no detiene automáticamente los `SnakeRunner`.
+The system has two main concurrent paths: the snake threads, which update the game model, and the UI, which repaints the board and queries state to display it. `GameClock` controls repaints and the visual state of the interface, but it is not the one that moves the snakes. This is why pausing the UI does not automatically stop the `SnakeRunner` threads.
 
-### Posibles condiciones de carrera
+### Possible Race Conditions
 
-- `Board` es compartido por todos los `SnakeRunner`. Sin sincronización, dos hilos podrían intentar modificar al mismo tiempo ratones, obstáculos, teleports o turbo: por ejemplo si dos serpientes se comen al mismo tiempo un raton, ambas intentan añadir un nuevo obstaculo y un nuevo raton y asi alterar estas colecciones. O del mismo modo como el metodo randomEmpty() que no esta protegido y puede ser accedido por multiple hilos.
+- `Board` is shared by all `SnakeRunner` instances. Without synchronization, two threads could simultaneously try to modify mice, obstacles, teleports, or turbo cells — for example, if two snakes eat the same mouse at the same time, both try to add a new obstacle and a new mouse, corrupting these collections. Similarly, `randomEmpty()` is not protected and can be accessed by multiple threads.
 
-  Pero por eso `Board.step(...)` está sincronizado, lo cual protege el avance de una serpiente sobre el tablero y evita que dos runners alteren el mismo estado al mismo tiempo. 
+  This is why `Board.step(...)` is synchronized: it protects a snake's advance over the board and prevents two runners from altering the same state at the same time.
 
-- Se usa `snapshot()` para la lectura que usa la UI, lo permite leer el cuerpo para dibujarlo, pero el riesgo aparece si la UI lee mientras otro hilo modifica la serpiente.
-- Los metodos `head()` y `advance()` trabajan sobre el mismo estado interno de la serpiente. Si fueran llamados desde varios hilos sin coordinación, podrían producir lecturas inconsistentes o pérdida de actualizaciones.
-- El metodo `turn()` modifica la dirección de la serpiente mientras `SnakeRunner` la consulta en cada paso.
+- `snapshot()` is used for UI reads, allowing the body to be read for rendering, but the risk arises if the UI reads while another thread is modifying the snake.
+- The methods `head()` and `advance()` operate on the same internal state of the snake. If called from multiple threads without coordination, they could produce inconsistent reads or lost updates.
+- The method `turn()` modifies the snake's direction while `SnakeRunner` reads it on each step.
 
-### Colecciones o estructuras no seguras en contexto concurrente
+### Unsafe Collections in a Concurrent Context
 
-- `ArrayDeque` en `Snake.body`.
-- `HashSet` en `Board.mice`, `Board.obstacles` y `Board.turbo`.
-- `HashMap` en `Board.teleports`.
+- `ArrayDeque` in `Snake.body`.
+- `HashSet` in `Board.mice`, `Board.obstacles`, and `Board.turbo`.
+- `HashMap` in `Board.teleports`.
 
-Estas colecciones no son thread‑safe pero están protegidas parcialmente por sincronización externa.
+These collections are not thread-safe but are partially protected by external synchronization.
 
-### Ocurrencias de espera activa (busy-wait) o sincronización innecesaria
+### Busy-Waiting or Unnecessary Synchronization
 
-No se observa un busy-wait clásico fuerte, porque `SnakeRunner` no entra en un ciclo de consulta constante sin dormir: después de mover una serpiente, hace `Thread.sleep(...)` y no gasta CPU. Tambien puede haber un bloqueo innecesario ya que el metodo step es sincronizado, entonces bloquea todo el board y a las demas serpientes.
+There is no strong classic busy-wait because `SnakeRunner` does not enter a constant polling loop: after moving a snake it calls `Thread.sleep(...)` and does not waste CPU. There can also be unnecessary blocking since `step` is synchronized, which locks the entire board for all other snakes.
 
-Por otro lado el control de ejecución está desacoplado entre la UI y los runners. `GameClock.pause()` solo cambia el estado visual de la interfaz, pero los `SnakeRunner` siguen corriendo. Esto explica por qué al pausar la UI puede seguir avanzando la simulación interna y parece como si se teletransportaran.
+Additionally, execution control is decoupled between the UI and the runners. `GameClock.pause()` only changes the visual state of the interface, but the `SnakeRunner` threads keep running. This explains why pausing the UI can let the internal simulation keep advancing, making snakes appear to teleport.
 
-### 2) Correcciones mínimas y regiones críticas
+### 2) Minimal Fixes and Critical Sections
 
-- **Elimina** esperas activas reemplazándolas por **señales** / **estados** o mecanismos de la librería de concurrencia.
+- **Eliminate** busy-waiting by replacing it with **signals** / **states** or concurrency library mechanisms.
 
-Para eliminar las esperas activas, vamos a usar un `PauseController` que maneje un estado compartido de pausa y reanudación. La solución usa el modelo de monitores de Java (`synchronized`, `wait()` y `notifyAll()`) para bloquear y reanudar a los `SnakeRunner` sin hacer polling activo. Así evitamos consumir CPU innecesariamente y coordinamos la suspensión y la reanudación de forma segura.
+To eliminate busy-waiting, we use a `PauseController` that manages a shared pause/resume state. The solution uses Java's monitor model (`synchronized`, `wait()`, and `notifyAll()`) to block and resume `SnakeRunner` threads without active polling. This avoids unnecessary CPU consumption and coordinates suspension and resumption safely.
 
-- Protege **solo** las **regiones críticas estrictamente necesarias** (evita bloqueos amplios).
+- Protect **only** the **strictly necessary critical sections** (avoid broad locks).
 
-Aquí se dejan únicamente las secciones que modifican el estado compartido; no se sincronizan variables locales ni cálculos que no comparten memoria. El acceso a `Board` debe ser atómico porque es un recurso global compartido, mientras que la UI no debe bloquear todo el juego y por eso lee copias defensivas del tablero.
+Only sections that modify shared state are synchronized; local variables and computations that do not share memory are left unprotected. Access to `Board` must be atomic because it is a globally shared resource, while the UI must not lock the entire game and therefore reads defensive copies of the board.
 
-En el caso de `Snake.snapshot()`, la idea es la misma: la UI trabaja sobre una copia del cuerpo para dibujar, pero si se quiere una consistencia total entre lectura y escritura, esa copia también debería coordinarse con sincronización adicional.
+The same logic applies to `Snake.snapshot()`: the UI works on a copy of the body for rendering, but for full read-write consistency that copy should also be coordinated with additional synchronization.
 
-Por esa razón `step(...)` sí debe ser `synchronized`, ya que ahí se lee y modifica el estado compartido del tablero. En cambio `randomEmpty()` no necesita sincronización adicional en este diseño, porque solo se invoca desde `step(...)` y desde el constructor, y en ambos casos ya está cubierto por el contexto de uso: `step(...)` entra dentro del lock de `Board`, y el constructor se ejecuta antes de que el objeto sea compartido con otros hilos.
+For this reason `step(...)` must be `synchronized`, since that is where shared board state is read and modified. In contrast, `randomEmpty()` does not need additional synchronization in this design because it is only called from `step(...)` and from the constructor — in both cases it is already covered: `step(...)` holds the `Board` lock, and the constructor runs before the object is shared with other threads.
 
-El método `createTeleportPairs(...)` también se usa únicamente durante la construcción del tablero, así que hoy tampoco necesita un bloqueo adicional. Si en el futuro se llama desde otros hilos o desde otro contexto fuera del constructor, entonces sí habría que revisar su sincronización.
+The method `createTeleportPairs(...)` is also used only during board construction, so it does not need an additional lock today either. If in the future it is called from other threads or outside the constructor, its synchronization would need to be revisited.
 
-Justificamos cada cambio indicando el riesgo y la solución aplicada: si una región crítica compartía estado mutable, podía producir inconsistencias o carreras; por eso se protegió solo el acceso que realmente modifica el estado compartido y se dejaron fuera las variables locales y los cálculos que no comparten memoria.
+Each change is justified by identifying the risk and the applied solution: if a critical section shared mutable state it could produce inconsistencies or races; therefore only access that actually modifies shared state was protected, and local variables and non-shared computations were left outside.
 
-### 3) Control de ejecución seguro (UI)
+### 3) Safe Execution Control (UI)
 
-Se implementó el ciclo completo de ejecución con **Start / Pause / Resume** usando el botón **Action**, el `GameClock` y un `PauseController` compartido por todos los `SnakeRunner`.
+The complete execution cycle with **Start / Pause / Resume** was implemented using the **Action** button, `GameClock`, and a `PauseController` shared by all `SnakeRunner` instances.
 
-![resumen](docs/board.png)
+![summary](docs/board.png)
 
-Cuando el usuario pulsa **Pause**, la UI no calcula el resumen inmediatamente. Primero cambia el estado a _"Waiting for a stable pause state..."_ y luego espera una **pausa estable**: esto significa que todos los runners activos ya llegaron al punto de espera (`wait`) y ninguno está aplicando un `step(...)` sobre el tablero.
+When the user presses **Pause**, the UI does not compute the summary immediately. It first changes the state to _"Waiting for a stable pause state..."_ and then waits for a **stable pause**: this means all active runners have reached their wait point (`wait`) and none is currently applying a `step(...)` to the board.
 
-![resumen](docs/waiting.png)
+![summary](docs/waiting.png)
 
+Only when that condition is met does the UI build and publish the summary:
 
-Solo cuando esa condición se cumple, la UI arma y publica el resumen:
+- **Longest living snake**: the snake with `isAlive() == true` and the greatest length (`snapshot().size()`).
+- **Worst snake**: the one that died first, using an incremental death order assigned in `Board.killSnake(...)`.
 
-- **Serpiente viva más larga**: la serpiente con `isAlive() == true` y mayor longitud (`snapshot().size()`).
-- **Peor serpiente**: la que murió primero, usando un orden de muerte incremental asignado en `Board.killSnake(...)`.
-![resumen](docs/resume1.png)
-![resumen](docs/resume2.png)
+![summary](docs/resume1.png)
+![summary](docs/resume2.png)
 
-Con esta estrategia se evita el _tearing_ de estado al pausar, porque el resumen no se calcula en medio de un avance parcial.
+This strategy avoids state tearing when pausing, because the summary is never computed in the middle of a partial advance.
 
+### 4) Robustness Under Load
 
+When running the game with a high number of snakes (e.g., N = 20), no visible race conditions or stability issues occur. This is because all modifications to shared board state are made inside synchronized critical sections, preventing unsafe concurrent access to the shared collections.
 
-### 4) Robustez bajo carga
+![summary](docs/board20.png)
 
-Al ejecutar el juego con un número alto de serpientes (por ejemplo, N = 20), no se presentan condiciones de carrera visibles ni problemas de estabilidad. Esto se debe a que las modificaciones sobre el estado compartido del tablero se realizan dentro de regiones críticas sincronizadas, evitando accesos concurrentes inseguros a las colecciones compartidas.
-
-![resumen](docs/board20.png)
-
-![resumen](docs/running20.png)
----
-
-## Entregables
-
-1. **Código fuente** funcionando en **Java 21**.
-2. Todo de manera clara en **`**el reporte de laboratorio**`** con:
-   - Data races encontradas y su solución.
-   - Colecciones mal usadas y cómo se protegieron (o sustituyeron).
-   - Esperas activas eliminadas y mecanismo utilizado.
-   - Regiones críticas definidas y justificación de su **alcance mínimo**.
-3. UI con **Iniciar / Pausar / Reanudar** y estadísticas solicitadas al pausar.
+![summary](docs/running20.png)
 
 ---
 
-## Criterios de evaluación (10)
+## Deliverables
 
-- (3) **Concurrencia correcta**: sin data races; sincronización bien localizada.
-- (2) **Pausa/Reanudar**: consistencia visual y de estado.
-- (2) **Robustez**: corre **con N alto** y sin excepciones de concurrencia.
-- (1.5) **Calidad**: estructura clara, nombres, comentarios; sin _code smells_ obvios.
-- (1.5) **Documentación**: **`reporte de laboratorio`** claro, reproducible;
-
----
-
-## Tips y configuración útil
-
-- **Número de serpientes**: `-Dsnakes=N` al ejecutar.
-- **Tamaño del tablero**: cambiar el constructor `new Board(width, height)`.
-- **Teleports / Turbo**: editar `Board.java` (métodos de inicialización y reglas en `step(...)`).
-- **Velocidad**: ajustar `GameClock` (tick) o el `sleep` del `SnakeRunner` (incluye modo turbo).
+1. **Source code** running on **Java 21**.
+2. Everything clearly documented in the **lab report** with:
+   - Data races found and their solution.
+   - Misused collections and how they were protected (or replaced).
+   - Busy-waits eliminated and the mechanism used.
+   - Critical sections defined and justification of their **minimum scope**.
+3. UI with **Start / Pause / Resume** and the requested statistics on pause.
 
 ---
 
-## Cómo correr pruebas
+## Evaluation Criteria (10 pts)
+
+- (3) **Correct concurrency**: no data races; synchronization well-localized.
+- (2) **Pause/Resume**: visual and state consistency.
+- (2) **Robustness**: runs **with high N** without concurrency exceptions.
+- (1.5) **Quality**: clear structure, names, comments; no obvious _code smells_.
+- (1.5) **Documentation**: clear, reproducible **lab report**.
+
+---
+
+## Useful Tips and Configuration
+
+- **Number of snakes**: `-Dsnakes=N` at runtime.
+- **Board size**: change the `new Board(width, height)` constructor.
+- **Teleports / Turbo**: edit `Board.java` (initialization methods and rules in `step(...)`).
+- **Speed**: adjust `GameClock` (tick) or the `sleep` in `SnakeRunner` (includes turbo mode).
+
+---
+
+## How to Run Tests
 
 ```bash
 mvn clean verify
 ```
 
-Incluye compilación y ejecución de pruebas JUnit. Si tienes análisis estático, ejecútalo en `verify` o `site` según tu `pom.xml`.
+Includes compilation and execution of JUnit tests. If you have static analysis configured, run it in the `verify` or `site` phase according to your `pom.xml`.
 
 ---
 
-## Créditos
+## Credits
 
-Este laboratorio es una adaptación modernizada del ejercicio **SnakeRace** de ARSW. El enunciado de actividades se conserva para mantener los objetivos pedagógicos del curso.
+This lab is a modernized adaptation of the **SnakeRace** exercise from ARSW. The activity statements are preserved to maintain the pedagogical goals of the course.
 
-**Base construida por el Ing. Javier Toquica.**
+**Base built by Eng. Javier Toquica.**
