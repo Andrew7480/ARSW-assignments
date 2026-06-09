@@ -5,7 +5,7 @@ import java.util.concurrent.CountDownLatch;
 public class Main {
 
 	public static void main(String[] args) {
-		int numHilos=20;
+		int numHilos=1000;
 		CountDownLatch latch = new CountDownLatch(numHilos);
 		
 		HiloProc[] hilos=new HiloProc[numHilos];

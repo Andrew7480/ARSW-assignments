@@ -43,7 +43,7 @@ public class GameEngine {
         observers.add(observer);
     }
 
-    public void notifyObservers() {
+    public synchronized void notifyObservers() {
         GameState state = gameState;
         observers.forEach(o -> o.onRoundEnd(board, state));
     }
@@ -102,11 +102,11 @@ public class GameEngine {
         }
     }
 
-    public boolean isRunning() {
+    public synchronized boolean isRunning() {
         return gameState == GameState.RUNNING;
     }
 
-    public void evaluateState() {
+    public synchronized void evaluateState() {
         Position neoPosition = board.getNeo().getPosition();
 
         boolean reachedPhone = board.getPhones()

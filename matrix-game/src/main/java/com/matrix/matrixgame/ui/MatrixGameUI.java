@@ -56,7 +56,7 @@ public class MatrixGameUI extends JFrame implements BoardObserver {
     public MatrixGameUI() {
         super("Matrix Game");
 
-        GameConfig config = new GameConfig(10, 15, 3, 2);
+        GameConfig config = new GameConfig(12, 15, 10, 2);
         GameEngine engine = new GameEngine(config);
         engine.initializeGame();
 

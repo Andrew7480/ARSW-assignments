@@ -89,7 +89,7 @@ public class Board {
         return true;
     }
 
-    public boolean isFree(Position position) {
+    public synchronized boolean isFree(Position position) {
 
         if (neo != null && neo.getPosition().equals(position)) {
             return false;
@@ -116,7 +116,7 @@ public class Board {
         return true;
     }
 
-    public Position randomEmptyPosition() {
+    public synchronized Position randomEmptyPosition() {
         int attempts = 0;
         Position position;
         do {
@@ -200,7 +200,7 @@ public class Board {
                         .equals(position));
     }
 
-    public boolean hasAgent(Position position) {
+    public synchronized boolean hasAgent(Position position) {
         return agents.stream()
                 .anyMatch(agent -> agent.getPosition()
                         .equals(position));

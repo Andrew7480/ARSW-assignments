@@ -47,7 +47,6 @@ public abstract class BfsMovementStrategy implements MovementStrategy {
         return from;
     }
 
-    // Walks the parent map backward from target to find the immediate next step from `from`
     private Position firstStep(Position from, Position target, Map<Position, Position> parent) {
         Position step = target;
         Position prev = parent.get(step);
